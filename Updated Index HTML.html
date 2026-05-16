@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pulse — Market Digest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F5F0; --surface: #FFFFFF; --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15); --text-primary: #1A1A18;
+    --text-secondary: #6B6B67; --text-tertiary: #9E9E9A;
+    --accent-light: #F0EDE6; --neg: #B33A3A; --pos: #2D7A4F;
+  }
+  html { font-size: 16px; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(247,245,240,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text-primary); text-decoration: none; }
+  .nav-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-primary); }
+  .nav-tag { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.5px; }
+
+  .onboard-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 80px 1.5rem 2rem; }
+  .onboard-inner { width: 100%; max-width: 520px; }
+  .onboard-eyebrow { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 1rem; }
+  .onboard-heading { font-family: 'DM Serif Display', serif; font-size: 38px; line-height: 1.15; color: var(--text-primary); margin-bottom: 0.75rem; }
+  .onboard-sub { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2.5rem; }
+  .field-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.3px; margin-bottom: 10px; }
+
+  .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 2rem; }
+  .role-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.25rem; cursor: pointer; text-align: left; transition: border-color 0.15s, transform 0.1s; }
+  .role-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .role-card.selected { border: 2px solid var(--text-primary); background: var(--accent-light); }
+  .role-icon { font-size: 22px; margin-bottom: 10px; }
+  .role-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; }
+  .role-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  .cadence-row { display: flex; gap: 8px; margin-bottom: 2rem; }
+  .cadence-btn { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .cadence-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .cadence-btn.selected { border: 2px solid var(--text-primary); color: var(--text-primary); font-weight: 500; background: var(--accent-light); }
+
+  .cta-btn { width: 100%; padding: 14px; background: var(--text-primary); color: var(--bg); border: none; border-radius: 10px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; opacity: 0.35; pointer-events: none; transition: opacity 0.2s, transform 0.1s; letter-spacing: -0.2px; }
+  .cta-btn.ready { opacity: 1; pointer-events: all; }
+  .cta-btn.ready:hover { transform: translateY(-1px); }
+
+  .loading-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1.5rem; padding-top: 56px; }
+  .loading-ring { width: 36px; height: 36px; border: 2px solid var(--border-strong); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 0.75s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps { display: flex; flex-direction: column; gap: 6px; }
+  .loading-step { font-size: 13px; color: var(--text-tertiary); display: flex; align-items: center; gap: 8px; transition: color 0.3s; }
+  .loading-step.active { color: var(--text-primary); }
+  .loading-step.done { color: var(--pos); }
+  .step-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .error-box { background: #fff0f0; border: 1px solid #f5c1c1; border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1rem; font-size: 13px; color: var(--neg); line-height: 1.6; max-width: 360px; text-align: center; }
+
+  .digest-wrap { max-width: 680px; margin: 0 auto; padding: 80px 1.5rem 4rem; }
+  .digest-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+  .digest-logo { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--text-primary); }
+  .digest-meta-right { text-align: right; }
+  .digest-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; background: var(--text-primary); color: var(--bg); margin-bottom: 4px; }
+  .digest-timestamp { font-size: 11px; color: var(--text-tertiary); display: block; }
+  .digest-headline { font-family: 'DM Serif Display', serif; font-size: 32px; line-height: 1.2; color: var(--text-primary); margin-bottom: 6px; }
+  .digest-deck { font-size: 14px; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6; }
+
+  .snapshot-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 2.5rem; }
+  .snap-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .snap-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 5px; }
+  .snap-value { font-size: 17px; font-weight: 500; color: var(--text-primary); }
+  .snap-change { font-size: 12px; margin-top: 3px; font-weight: 500; }
+  .snap-change.neg { color: var(--neg); }
+  .snap-change.pos { color: var(--pos); }
+
+  .section { margin-bottom: 2.5rem; }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .section-body { font-size: 15px; color: var(--text-primary); line-height: 1.75; }
+
+  .story-item { display: grid; grid-template-columns: 64px 1fr; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .story-item:last-child { border-bottom: none; }
+  .story-ticker { font-size: 11px; font-weight: 500; background: var(--accent-light); color: var(--text-secondary); padding: 3px 7px; border-radius: 4px; display: inline-block; }
+  .story-headline { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 5px; line-height: 1.4; }
+  .story-why { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  .strategy-callout { background: var(--text-primary); color: var(--bg); border-radius: 12px; padding: 1.5rem 1.75rem; }
+  .strategy-callout p { font-size: 14px; line-height: 1.8; }
+
+  .watch-list { display: flex; flex-direction: column; }
+  .watch-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text-primary); line-height: 1.6; }
+  .watch-item:last-child { border-bottom: none; }
+  .watch-num { font-size: 11px; font-weight: 500; color: var(--text-tertiary); min-width: 18px; padding-top: 3px; }
+
+  .digest-footer { border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .back-link { font-size: 13px; color: var(--text-secondary); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px; transition: color 0.15s; }
+  .back-link:hover { color: var(--text-primary); }
+  .next-refresh { font-size: 12px; color: var(--text-tertiary); }
+  .live-badge { font-size: 11px; color: var(--pos); font-weight: 500; display: flex; align-items: center; gap: 5px; }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pos); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  @media (max-width: 480px) {
+    .onboard-heading { font-size: 28px; }
+    .roles-grid { grid-template-columns: 1fr; }
+    .digest-headline { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<script>
+  const BACKEND_URL = "https://pulse-backend-ayy2.onrender.com";
+</script>
+
+<nav>
+  <a class="nav-logo" href="#"><span class="nav-logo-dot"></span> Pulse</a>
+  <span class="nav-tag">Market Intelligence</span>
+</nav>
+
+<div class="screen active" id="screen-onboard">
+  <div class="onboard-wrap">
+    <div class="onboard-inner">
+      <div class="onboard-eyebrow">Welcome to Pulse</div>
+      <h1 class="onboard-heading">Your market digest,<br>built for your role.</h1>
+      <p class="onboard-sub">AI-powered briefings tailored to how you actually trade, invest, and advise. Select your role to get started.</p>
+      <div class="field-label">I am a —</div>
+      <div class="roles-grid">
+        <button class="role-card" onclick="selectRole(this,'quant')">
+          <div class="role-icon">📐</div>
+          <div class="role-title">Quant</div>
+          <div class="role-desc">Factor models, vol regimes, systematic strategies</div>
+        </button>
+        <button class="role-card" onclick="selectRole(this,'day_trader')">
+          <div class="role-icon">⚡</div>
+          <div class="role-title">Day trader</div>
+          <div class="role-desc">Intraday momentum, earnings plays, gap setups</div>
+        </button>
+        <button class="role-card" onclick="selectRole(this,'hedge_fund_pm')">
+          <div class="role-icon">🏛</div>
+          <div class="role-title">Hedge fund PM</div>
+          <div class="role-desc">Macro trends, geopolitical risk, sector rotation</div>
+        </button>
+        <button class="role-card" onclick="selectRole(this,'wealth_manager')">
+          <div class="role-icon">💼</div>
+          <div class="role-title">Wealth manager</div>
+          <div class="role-desc">Client portfolios, Fed policy, long-term allocation</div>
+        </button>
+      </div>
+      <div class="field-label">Digest cadence —</div>
+      <div class="cadence-row">
+        <button class="cadence-btn" onclick="selectCadence(this,'Hourly')">Hourly</button>
+        <button class="cadence-btn" onclick="selectCadence(this,'Daily')">Daily</button>
+        <button class="cadence-btn" onclick="selectCadence(this,'Pre-market')">Pre-market</button>
+      </div>
+      <button class="cta-btn" id="cta" onclick="showLoading()">Generate my digest &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="screen-loading">
+  <div class="loading-wrap">
+    <div class="loading-ring"></div>
+    <div class="loading-steps">
+      <div class="loading-step active" id="step-0"><span class="step-dot"></span>Fetching live market data</div>
+      <div class="loading-step" id="step-1"><span class="step-dot"></span>Scanning news sources</div>
+      <div class="loading-step" id="step-2"><span class="step-dot"></span>Analyzing signals for your role</div>
+      <div class="loading-step" id="step-3"><span class="step-dot"></span>Generating your digest</div>
+    </div>
+    <div class="error-box" id="error-box" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="screen" id="screen-digest">
+  <div class="digest-wrap">
+    <div class="digest-topbar">
+      <div class="digest-logo">Pulse</div>
+      <div class="digest-meta-right">
+        <span class="digest-badge" id="role-badge"></span>
+        <span class="digest-timestamp" id="digest-time"></span>
+      </div>
+    </div>
+    <h2 class="digest-headline" id="digest-headline"></h2>
+    <p class="digest-deck" id="digest-deck"></p>
+    <div class="snapshot-strip" id="snapshot-strip"></div>
+    <div class="section">
+      <div class="section-label">Market overview</div>
+      <div class="section-body" id="overview-body"></div>
+    </div>
+    <div class="section">
+      <div class="section-label">Key stories</div>
+      <div id="stories-body"></div>
+    </div>
+    <div class="section">
+      <div class="section-label">What this means for your strategy</div>
+      <div class="strategy-callout"><p id="strategy-body"></p></div>
+    </div>
+    <div class="section">
+      <div class="section-label">Watch list</div>
+      <div class="watch-list" id="watchlist-body"></div>
+    </div>
+    <div class="digest-footer">
+      <button class="back-link" onclick="goBack()">&larr; Change role</button>
+      <span class="live-badge"><span class="live-dot"></span> Live data</span>
+      <span class="next-refresh" id="next-refresh"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedRole = null;
+  let selectedCadence = null;
+
+  function selectRole(el, role) {
+    document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedRole = role;
+    checkReady();
+  }
+
+  function selectCadence(el, cadence) {
+    document.querySelectorAll('.cadence-btn').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedCadence = cadence;
+    checkReady();
+  }
+
+  function checkReady() {
+    const btn = document.getElementById('cta');
+    if (selectedRole && selectedCadence) btn.classList.add('ready');
+    else btn.classList.remove('ready');
+  }
+
+  function showLoading() {
+    switchScreen('screen-loading');
+    document.getElementById('error-box').style.display = 'none';
+    const steps = ['step-0','step-1','step-2','step-3'];
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i > 0) { document.getElementById(steps[i-1]).classList.remove('active'); document.getElementById(steps[i-1]).classList.add('done'); }
+      if (i < steps.length) { document.getElementById(steps[i]).classList.add('active'); i++; }
+      else { clearInterval(interval); }
+    }, 900);
+    fetchDigest();
+  }
+
+  async function fetchDigest() {
+    try {
+      const res = await fetch(BACKEND_URL + '/api/digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: selectedRole, cadence: selectedCadence })
+      });
+      if (!res.ok) throw new Error('Server error ' + res.status);
+      const data = await res.json();
+      renderDigest(data);
+    } catch (err) {
+      const box = document.getElementById('error-box');
+      box.style.display = 'block';
+      box.textContent = 'Could not connect to backend. Make sure your Render server is running. (' + err.message + ')';
+    }
+  }
+
+  function renderDigest(data) {
+    const d = data.digest;
+    const market = data.market;
+    const now = new Date(data.generated_at + 'Z');
+    const timeStr = now.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + ' · ' + now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+
+    document.getElementById('role-badge').textContent = data.role;
+    document.getElementById('digest-time').textContent = timeStr;
+    document.getElementById('digest-headline').textContent = d.headline;
+    document.getElementById('digest-deck').textContent = d.deck;
+    document.getElementById('overview-body').textContent = d.overview;
+    document.getElementById('strategy-body').textContent = d.strategy;
+
+    let snapHTML = '';
+    for (const [name, vals] of Object.entries(market)) {
+      const pct = parseFloat(vals.change_pct);
+      const dir = isNaN(pct) ? '' : pct < 0 ? 'neg' : 'pos';
+      const arrow = isNaN(pct) ? '' : pct < 0 ? '▼' : '▲';
+      snapHTML += '<div class="snap-card"><div class="snap-label">' + name + '</div><div class="snap-value">' + vals.close + '</div><div class="snap-change ' + dir + '">' + arrow + ' ' + (isNaN(pct) ? 'N/A' : Math.abs(pct).toFixed(2) + '%') + '</div></div>';
+    }
+    document.getElementById('snapshot-strip').innerHTML = snapHTML;
+
+    let storiesHTML = '';
+    (d.stories || []).forEach(s => {
+      storiesHTML += '<div class="story-item"><div><span class="story-ticker">' + s.ticker + '</span></div><div><div class="story-headline">' + s.headline + '</div><div class="story-why">' + s.why + '</div></div></div>';
+    });
+    document.getElementById('stories-body').innerHTML = storiesHTML;
+
+    let watchHTML = '';
+    (d.watchlist || []).forEach((w, i) => {
+      watchHTML += '<div class="watch-item"><span class="watch-num">0' + (i+1) + '</span><span>' + w + '</span></div>';
+    });
+    document.getElementById('watchlist-body').innerHTML = watchHTML;
+
+    const refreshMap = { 'Hourly': 'Next refresh in 60 min', 'Daily': 'Next refresh tomorrow 6:00 AM ET', 'Pre-market': 'Next refresh 8:30 AM ET' };
+    document.getElementById('next-refresh').textContent = refreshMap[selectedCadence] || '';
+    switchScreen('screen-digest');
+  }
+
+  function goBack() {
+    document.querySelectorAll('.loading-step').forEach((el, i) => { el.classList.remove('active','done'); if (i === 0) el.classList.add('active'); });
+    switchScreen('screen-onboard');
+  }
+
+  function switchScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+</script>
+</body>
+</html>
