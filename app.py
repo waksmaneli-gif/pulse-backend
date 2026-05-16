@@ -3,6 +3,8 @@ from flask_cors import CORS
 import requests
 import anthropic
 import os
+import json
+import re
 from datetime import datetime
 
 app = Flask(__name__)
@@ -105,6 +107,22 @@ def fetch_market_data():
     return results
 
 
+def clean_json(raw):
+    """Strip markdown fences and extract valid JSON."""
+    raw = raw.strip()
+    # Remove ```json or ``` fences
+    raw = re.sub(r'^```json\s*', '', raw, flags=re.MULTILINE)
+    raw = re.sub(r'^```\s*', '', raw, flags=re.MULTILINE)
+    raw = re.sub(r'\s*```$', '', raw, flags=re.MULTILINE)
+    raw = raw.strip()
+    # Find the first { and last } to extract just the JSON object
+    start = raw.find('{')
+    end = raw.rfind('}')
+    if start != -1 and end != -1:
+        raw = raw[start:end+1]
+    return raw
+
+
 def generate_digest(role_key, articles, market_data):
     role = ROLES[role_key]
 
@@ -133,25 +151,23 @@ TODAY'S MARKET SNAPSHOT:
 LATEST NEWS:
 {news_text}
 
-Generate a JSON response with exactly this structure:
+Respond with ONLY a valid JSON object, no markdown, no backticks, no explanation. Use exactly this structure:
 {{
   "headline": "one punchy headline summarizing the most important thing for this role (max 10 words)",
   "deck": "one sentence expanding on the headline (max 20 words)",
   "overview": "2-3 sentence market overview relevant to this role",
   "stories": [
-    {{"ticker": "TICKER or MACRO", "headline": "story headline", "why": "why this matters for this specific role (2 sentences)"}},
-    {{"ticker": "TICKER or MACRO", "headline": "story headline", "why": "why this matters for this specific role (2 sentences)"}},
-    {{"ticker": "TICKER or MACRO", "headline": "story headline", "why": "why this matters for this specific role (2 sentences)"}}
+    {{"ticker": "TICKER", "headline": "story headline", "why": "why this matters for this role (2 sentences)"}},
+    {{"ticker": "TICKER", "headline": "story headline", "why": "why this matters for this role (2 sentences)"}},
+    {{"ticker": "TICKER", "headline": "story headline", "why": "why this matters for this role (2 sentences)"}}
   ],
-  "strategy": "2-3 sentences of specific actionable insight for this role based on today's news and market data",
+  "strategy": "2-3 sentences of specific actionable insight for this role",
   "watchlist": [
-    "specific thing to watch in next 24 hours with context",
-    "specific thing to watch in next 24 hours with context",
-    "specific thing to watch in next 24 hours with context"
+    "specific thing to watch in next 24 hours",
+    "specific thing to watch in next 24 hours",
+    "specific thing to watch in next 24 hours"
   ]
-}}
-
-Respond with valid JSON only. No markdown, no backticks, no extra text."""
+}}"""
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
     message = client.messages.create(
@@ -160,9 +176,10 @@ Respond with valid JSON only. No markdown, no backticks, no extra text."""
         messages=[{"role": "user", "content": prompt}]
     )
 
-    import json
-    raw = message.content[0].text.strip()
-    return json.loads(raw)
+    raw = message.content[0].text
+    print(f"Raw Claude response: {raw[:200]}")
+    cleaned = clean_json(raw)
+    return json.loads(cleaned)
 
 
 @app.route("/api/digest", methods=["POST"])
